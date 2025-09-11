@@ -1,15 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart';
+import 'package:rizzbot/features/auth/view/gender_screen.dart';
+import 'package:rizzbot/features/auth/view/name_screen.dart';
 import 'package:rizzbot/screens/login_screen.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-
+void main() {
   runApp(const MyApp());
 }
 
@@ -19,9 +13,16 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'RizzBot',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: const LoginScreen(),
+      title: 'Rizz App',
+      theme: ThemeData(
+        useMaterial3: true,
+      ),
+      home: LoginScreen(),
+      routes: {
+        LoginScreen.routeName: (context) => LoginScreen(),
+        NameScreen.routeName: (context) => NameScreen(),
+        GenderScreen.routeName: (context) => GenderScreen(),
+      },
     );
   }
 }

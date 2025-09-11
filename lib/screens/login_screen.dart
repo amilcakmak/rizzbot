@@ -2,11 +2,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:rizz/common/utils/app_colors.dart';
-import 'package:rizz/common/utils/media_query.dart';
-import 'package:rizz/common/widgets/gradient_button.dart';
-import 'package:rizz/features/auth/view/gender_screen.dart';
-import 'package:rizz/features/auth/view/name_screen.dart';
+import 'package:rizzbot/common/utils/app_colors.dart';
+import 'package:rizzbot/common/utils/media_query.dart';
+import 'package:rizzbot/common/widgets/gradient_button.dart';
+import 'package:rizzbot/features/auth/view/gender_screen.dart';
+import 'package:rizzbot/features/auth/view/name_screen.dart';
 
 class LoginScreen extends StatelessWidget {
   static const String routeName = '/login-screen';
@@ -21,8 +21,8 @@ class LoginScreen extends StatelessWidget {
       body: SafeArea(
         child: Padding(
           padding: EdgeInsets.symmetric(
-            horizontal: MQuery.getWidth(0.08),
-            vertical: MQuery.getHeight(0.02),
+            horizontal: MQuery.getWidth(context, 0.08),
+            vertical: MQuery.getHeight(context, 0.02),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.end,
@@ -51,8 +51,6 @@ class LoginScreen extends StatelessWidget {
                         await googleUser.authentication;
                     
                     // Kimlik doğrulama credential'ı oluştur
-                    // 'accessToken' yerine 'idToken' ve 'accessToken' kullanıyoruz.
-                    // Bu, Google paketi güncellemelerinden kaynaklanan bir değişiklik.
                     final OAuthCredential credential = GoogleAuthProvider.credential(
                       accessToken: googleAuth.accessToken,
                       idToken: googleAuth.idToken,
@@ -75,7 +73,7 @@ class LoginScreen extends StatelessWidget {
                 icon: FontAwesomeIcons.google,
               ),
               SizedBox(
-                height: MQuery.getHeight(0.015),
+                height: MQuery.getHeight(context, 0.015),
               ),
               const Text(
                 'Bir hesap oluşturarak veya giriş yaparak, \n Hizmet Şartları ve Gizlilik Politikası\'nı kabul etmiş olursun.',
@@ -85,7 +83,7 @@ class LoginScreen extends StatelessWidget {
                 ),
               ),
               SizedBox(
-                height: MQuery.getHeight(0.015),
+                height: MQuery.getHeight(context, 0.015),
               ),
             ],
           ),
