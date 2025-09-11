@@ -1,119 +1,94 @@
-// lib/screens/login_screen.dart
-import 'package:flutter/material.dart';
-import 'package:rizzbot/screens/home_screen.dart';
-import 'package:rizzbot/screens/register_screen.dart';
-import 'package:rizzbot/auth_service.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:rizz/common/utils/app_colors.dart';
+import 'package:rizz/common/utils/media_query.dart';
+import 'package:rizz/common/widgets/gradient_button.dart';
+import 'package:rizz/features/auth/view/gender_screen.dart';
+import 'package:rizz/features/auth/view/name_screen.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class LoginScreen extends StatelessWidget {
+  static const String routeName = '/login-screen';
+  LoginScreen({super.key});
 
-  @override
-  State<LoginScreen> createState() => _LoginScreenState();
-}
-
-class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
-  final FirebaseAuthService _authService = FirebaseAuthService();
-
-  bool isLoading = false;
-
-  Future<void> _login() async {
-    setState(() => isLoading = true);
-
-    final success = await _authService.loginWithEmail(
-      emailController.text.trim(),
-      passwordController.text.trim(),
-    );
-
-    setState(() => isLoading = false);
-
-    if (success) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Giriş başarısız! Bilgileri kontrol et.")),
-      );
-    }
-  }
-
-  Future<void> _googleLogin() async {
-    try {
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-      if (googleUser == null) return;
-
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
-
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      await FirebaseAuth.instance.signInWithCredential(credential);
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Google giriş hatası: $e")),
-      );
-    }
-  }
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Giriş Yap"),
-        centerTitle: true,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            TextField(
-              controller: emailController,
-              decoration: const InputDecoration(labelText: "Email"),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: "Şifre"),
-            ),
-            const SizedBox(height: 24),
-            isLoading
-                ? const CircularProgressIndicator()
-                : ElevatedButton(
-                    onPressed: _login,
-                    child: const Text("Giriş Yap"),
-                  ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: _googleLogin,
-              icon: const Icon(Icons.login),
-              label: const Text("Google ile Giriş Yap"),
-            ),
-            const SizedBox(height: 24),
-            TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const RegisterScreen()),
-                );
-              },
-              child: const Text("Hesabın yok mu? Kayıt ol"),
-            )
-          ],
+      body: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: MQuery.getWidth(0.08),
+            vertical: MQuery.getHeight(0.02),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              const Spacer(),
+              const Text(
+                'Rizz',
+                style: TextStyle(
+                  fontSize: 70,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Spacer(),
+              GradientButton(
+                onPressed: () async {
+                  try {
+                    // Google ile giriş yapma süreci
+                    final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+
+                    if (googleUser == null) {
+                      return;
+                    }
+
+                    // GoogleSignInAuthentication nesnesini al
+                    final GoogleSignInAuthentication googleAuth =
+                        await googleUser.authentication;
+                    
+                    // Kimlik doğrulama credential'ı oluştur
+                    // 'accessToken' yerine 'idToken' ve 'accessToken' kullanıyoruz.
+                    // Bu, Google paketi güncellemelerinden kaynaklanan bir değişiklik.
+                    final OAuthCredential credential = GoogleAuthProvider.credential(
+                      accessToken: googleAuth.accessToken,
+                      idToken: googleAuth.idToken,
+                    );
+                    
+                    // Firebase ile kimlik doğrulama
+                    await _auth.signInWithCredential(credential);
+
+                    // Başarılı giriş sonrası yönlendirme
+                    Navigator.pushNamedAndRemoveUntil(
+                      context,
+                      NameScreen.routeName,
+                      (route) => false,
+                    );
+                  } catch (e) {
+                    print('Google Sign In Error: $e');
+                  }
+                },
+                btnText: 'Google ile Devam Et',
+                icon: FontAwesomeIcons.google,
+              ),
+              SizedBox(
+                height: MQuery.getHeight(0.015),
+              ),
+              const Text(
+                'Bir hesap oluşturarak veya giriş yaparak, \n Hizmet Şartları ve Gizlilik Politikası\'nı kabul etmiş olursun.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              SizedBox(
+                height: MQuery.getHeight(0.015),
+              ),
+            ],
+          ),
         ),
       ),
     );
