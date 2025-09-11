@@ -39,6 +39,7 @@ dependencies:
   # Diğer Gereksinimler
   http: ^1.5.0
   tesseract_ocr: 0.5.0
+  font_awesome_flutter: ^10.7.0
 
 dev_dependencies:
   flutter_test:
