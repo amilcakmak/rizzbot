@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "418811908380",
+    "project_id": "rizzbot-e36f8",
+    "storage_bucket": "rizzbot-e36f8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:418811908380:android:06cda83c1650326b01ead9",
+        "android_client_info": {
+          "package_name": "com.example.rizzbot"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "418811908380-195sk2a02cgpos81cdnsest4u7s6gi26.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.rizzbot",
+            "certificate_hash": "518d733169efc21cb2693af6c1ffbc96a1374365"
+          }
+        },
+        {
+          "client_id": "418811908380-k0a23dv7h357tm03mdpdus294v2p7cib.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD7e5OVs1xzTsIDX5iEkW4Bow4RMnusv7U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "418811908380-k0a23dv7h357tm03mdpdus294v2p7cib.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "418811908380-s2hlf99eoo7rg129brvhfnnupljejl58.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.rootcrack.rizzbot"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
