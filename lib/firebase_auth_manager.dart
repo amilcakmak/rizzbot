@@ -13,7 +13,7 @@ class AuthService {
 
   Future<bool> loginWithEmail(String email, String password) async {
     try {
-      await user.signInWithEmailAndPassword(email: email, password: password);
+      await user?.signInWithEmailAndPassword(email: email, password: password);
       return true;
     } catch (e) {
       return false;

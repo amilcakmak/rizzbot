@@ -20,7 +20,7 @@ class OpenAIAPI {
         return json.decode(response.body)['choices'][0]['message']['content'];
       }
     } catch (e) {
-      rethrow e;
+      rethrow; e;
     }
     
     throw Exception("API bağlantı hatası");

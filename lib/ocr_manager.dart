@@ -9,7 +9,7 @@ class OCRManager {
     try {
       // Google ML Kit veya başka bir OCR servisini kullanacağız
     } catch (e) {
-      rethrow e.toString();
+      rethrow; e.toString();
     }
     
     throw Exception("OCR işlemi hatası");
