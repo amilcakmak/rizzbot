@@ -6,11 +6,11 @@
       final IconData icon;
 
       const GradientButton({
-        Key? key,
+        super.key,
         required this.onPressed,
         required this.btnText,
         required this.icon,
-      }) : super(key: key);
+      });
 
       @override
       Widget build(BuildContext context) {

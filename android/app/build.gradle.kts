@@ -44,3 +44,13 @@ flutter {
     source = "../.."
 }
 
+// HATA DÜZELTMESİ: Eksik olan Firebase bağımlılıkları eklendi.
+dependencies {
+    // Firebase Bill of Materials (BOM) ile tüm Firebase kütüphane versiyonlarını yönet.
+    implementation(platform("com.google.firebase:firebase-bom:33.1.2"))
+
+    // Projede kullanılan Firebase servislerini ekle.
+    implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.firebase:firebase-analytics-ktx")
+	implementation("com.google.firebase:firebase-firestore-ktx")
+}

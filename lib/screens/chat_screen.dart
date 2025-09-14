@@ -1,8 +1,10 @@
-// lib/screens/chat_screen.dart
 
+// lib/screens/chat_screen.dart
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:rizzbot/main.dart';
 
 class ChatScreen extends StatefulWidget {
   static const String routeName = '/chat-screen';
@@ -14,100 +16,125 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
-  final List<String> _messages = [];
-  String responseText = "";
-  final User? currentUser = FirebaseAuth.instance.currentUser;
+  final List<Map<String, String>> _messages = [];
+  bool _isLoading = false;
 
-  // TODO: Your Gemini API Key from Google AI Studio.
-  // Bu kod, anahtarınızı uygulama içinde göstermektedir.
-  // Güvenlik açısından, API anahtarınızı üretim ortamında bu şekilde
-  // saklamamanız önerilir.
-  static const String _apiKey = "AIzaSyB4XFHwSkPqdi1iSkiwvjAiWc_AkIX1LII"; // <-- API anahtarınızı buraya yapıştırın
+  Future<void> _sendMessage() async {
+    if (_controller.text.isEmpty) return;
 
-  static const Color darkBlue = Color(0xFF2B2B4F);
-  static const Color purple = Color(0xFF6B45A6);
-  static const Color lightPurple = Color(0xFF9B45C6);
-
-  final model = GenerativeModel(model: 'gemini-2.0-flash', apiKey: _apiKey);
-
-  void _generateResponse(String prompt) async {
-    if (prompt.isEmpty) return;
-    if (_apiKey.isEmpty) {
+    final userMessage = _controller.text;
+    // Asenkron işlem öncesi state güncellemesi için mounted kontrolü
+    if (mounted) {
       setState(() {
-        _messages.add('RizzBot: API anahtarı ayarlanmamış. Lütfen _apiKey değişkenini güncelleyin.');
+        _messages.add({'role': 'user', 'content': userMessage});
+        _isLoading = true;
       });
-      return;
     }
 
-    setState(() {
-      _messages.add('Sen: $prompt');
-      responseText = "Yükleniyor...";
-    });
+    _controller.clear();
 
     try {
-      final content = [Content.text(prompt)];
-      final response = await model.generateContent(content);
-      String aiResponse = response.text ?? "Yanıt alınamadı.";
+      final response = await http.post(
+        Uri.parse('https://api.openai.com/v1/chat/completions'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${dotenv.env['OPENAI_API_KEY']}',
+        },
+        body: jsonEncode({
+          'model': 'gpt-3.5-turbo',
+          'messages': [
+            {'role': 'system', 'content': 'You are a helpful assistant.'},
+            ..._messages
+          ],
+        }),
+      );
+      
+      // Asenkron işlem (API isteği) sonrası mounted kontrolü
+      if (!mounted) return;
 
-      setState(() {
-        responseText = ""; // Placeholder'ı temizle
-        _messages.add('RizzBot: $aiResponse');
-        _controller.clear();
-      });
+      if (response.statusCode == 200) {
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
+        final botMessage = data['choices'][0]['message']['content'];
+
+        setState(() {
+          _messages.add({'role': 'assistant', 'content': botMessage});
+        });
+      } else {
+         _showErrorDialog('Oops! Bir şeyler ters gitti. (Hata Kodu: ${response.statusCode})');
+      }
     } catch (e) {
+      // Hata yakalandıktan sonra mounted kontrolü
+      if (!mounted) return;
+      _showErrorDialog('Mesaj gönderilemedi. Lütfen internet bağlantınızı kontrol edin.');
+    }
+
+    // İşlem bittikten sonra mounted kontrolü
+    if (mounted) {
       setState(() {
-        responseText = "";
-        _messages.add('RizzBot: Bir hata oluştu: ${e.toString()}');
+        _isLoading = false;
       });
     }
   }
 
+  void _showErrorDialog(String message) {
+    if (!mounted) return; // Dialog göstermeden önce de kontrol etmek en güvenlisidir.
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDarkMode ? Colors.grey[900] : Colors.white,
+        title: const Text('Hata'),
+        content: Text(message),
+        actions: <Widget>[
+          TextButton(
+            child: const Text('Tamam'),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+            },
+          )
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: Colors.black,
       appBar: AppBar(
-        backgroundColor: Colors.black,
-        elevation: 0,
-        title: Text(
-          currentUser?.displayName ?? "RizzBot",
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        title: const Text('RizzBot ile Sohbet'),
+        centerTitle: true,
       ),
       body: Column(
         children: [
           Expanded(
             child: ListView.builder(
+              padding: const EdgeInsets.all(10.0),
               reverse: true,
-              padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 20.0),
               itemCount: _messages.length,
               itemBuilder: (context, index) {
-                final reversedIndex = _messages.length - 1 - index;
-                final message = _messages[reversedIndex];
-                final isUserMessage = message.startsWith('Sen:');
-
+                final message = _messages.reversed.toList()[index];
+                final isUserMessage = message['role'] == 'user';
                 return Align(
                   alignment: isUserMessage ? Alignment.centerRight : Alignment.centerLeft,
                   child: Container(
-                    margin: const EdgeInsets.symmetric(vertical: 5.0),
-                    padding: const EdgeInsets.symmetric(horizontal: 15.0, vertical: 10.0),
+                    margin: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 10.0),
+                    padding: const EdgeInsets.all(12.0),
                     decoration: BoxDecoration(
-                      color: isUserMessage ? lightPurple : Colors.grey[800],
-                      borderRadius: BorderRadius.only(
-                        topLeft: const Radius.circular(20),
-                        topRight: const Radius.circular(20),
-                        bottomLeft: isUserMessage ? const Radius.circular(20) : const Radius.circular(5),
-                        bottomRight: isUserMessage ? const Radius.circular(5) : const Radius.circular(20),
-                      ),
+                      // HATA DÜZELTMESİ: 'MyApp.accentColor' tanımsızdı ve kaldırıldı.
+                      // Kullanıcı mesajları için hem aydınlık hem de karanlık modda tutarlılık
+                      // sağlamak amacıyla 'MyApp.primaryColor' kullanıldı.
+                      color: isUserMessage
+                          ? MyApp.primaryColor
+                          : (isDarkMode ? Colors.grey[800] : Colors.grey[300]),
+                      borderRadius: BorderRadius.circular(15.0),
                     ),
                     child: Text(
-                      message.replaceFirst(isUserMessage ? 'Sen: ' : 'RizzBot: ', ''),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16.0,
+                      message['content']!,
+                       style: TextStyle(
+                        color: isUserMessage
+                            ? Colors.white
+                            : (isDarkMode ? Colors.white70 : Colors.black87),
                       ),
                     ),
                   ),
@@ -115,64 +142,29 @@ class _ChatScreenState extends State<ChatScreen> {
               },
             ),
           ),
-          if (responseText.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  responseText,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.6),
-                    fontStyle: FontStyle.italic,
+          if (_isLoading)
+            const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: CircularProgressIndicator(),
+            ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    decoration: const InputDecoration(hintText: 'Bir mesaj yaz...'),
+                    onSubmitted: (value) => _sendMessage(),
                   ),
                 ),
-              ),
-            ),
-          _buildMessageInput(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMessageInput() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 10.0),
-      color: Colors.black,
-      child: Row(
-        children: [
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.grey[850],
-                borderRadius: BorderRadius.circular(25.0),
-              ),
-              child: TextField(
-                controller: _controller,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: "Bir mesaj yazın...",
-                  hintStyle: TextStyle(color: Colors.grey[600]),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+                IconButton(
+                  icon: const Icon(Icons.send),
+                  onPressed: _sendMessage,
+                  // İYİLEŞTİRME: Rengi doğrudan temadan almak daha robust bir yaklaşımdır.
+                  color: Theme.of(context).primaryColor,
                 ),
-                onSubmitted: _generateResponse,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8.0),
-          Container(
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [purple, lightPurple],
-                begin: Alignment.bottomLeft,
-                end: Alignment.topRight,
-              ),
-              shape: BoxShape.circle,
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.send, color: Colors.white),
-              onPressed: () => _generateResponse(_controller.text),
+              ],
             ),
           ),
         ],

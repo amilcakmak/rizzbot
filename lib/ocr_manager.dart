@@ -1,5 +1,4 @@
 import 'package:tesseract_ocr/tesseract_ocr.dart';
-import 'dart:io';
 
 class OCRManager {
   
@@ -9,7 +8,7 @@ class OCRManager {
     try {
       // Google ML Kit veya başka bir OCR servisini kullanacağız
     } catch (e) {
-      rethrow; e.toString();
+      rethrow;
     }
     
     throw Exception("OCR işlemi hatası");

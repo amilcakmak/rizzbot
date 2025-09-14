@@ -1,13 +1,15 @@
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:rizzbot/main.dart';
 import 'package:rizzbot/screens/login_screen.dart';
 import 'dart:math';
 import 'dart:async';
 
 class ProfileScreen extends StatefulWidget {
   static const String routeName = '/profile-screen';
-  const ProfileScreen({Key? key}) : super(key: key);
+  const ProfileScreen({super.key});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -22,7 +24,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String? userEmail;
   String? userPhotoUrl;
   bool _isLoading = true;
-  late StreamSubscription<DocumentSnapshot<Map<String, dynamic>>> _userSubscription;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userSubscription;
 
   final List<String> _localAvatars = List.generate(
     150,
@@ -37,7 +39,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   void dispose() {
-    _userSubscription.cancel();
+    _userSubscription?.cancel();
     super.dispose();
   }
 
@@ -78,6 +80,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       });
     } else {
+      // HATA DÜZELTMESİ: Asenkron boşluktan sonra context kullanımı için mounted kontrolü eklendi.
       if (mounted) {
         Navigator.pushReplacementNamed(context, LoginScreen.routeName);
       }
@@ -85,10 +88,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _showAvatarSelectionDialog() async {
+    // HATA DÜZELTMESİ: Asenkron boşluktan sonra context kullanımı için mounted kontrolü eklendi.
+    if (!mounted) return;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return showDialog<void>(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
+          backgroundColor: isDarkMode ? Colors.grey[900] : Colors.white,
           title: const Text('Avatar Seç'),
           content: SizedBox(
             width: double.maxFinite,
@@ -109,15 +116,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       await _firestore.collection('users').doc(user.uid).update({
                         'photoUrl': avatarPath,
                       });
-                      setState(() {
-                        userPhotoUrl = avatarPath;
-                      });
                     }
-                    Navigator.of(context).pop();
+                    // HATA DÜZELTMESİ: Asenkron boşluktan sonra context kullanımı için mounted kontrolü eklendi.
+                    if (mounted) {
+                      Navigator.of(context).pop();
+                    }
                   },
                   child: CircleAvatar(
                     radius: 30,
-                    backgroundColor: Colors.grey[200],
+                    backgroundColor: Colors.grey[800],
                     backgroundImage: AssetImage(avatarPath),
                   ),
                 );
@@ -138,6 +145,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _showEditProfileDialog() async {
+    // HATA DÜZELTMESİ: Asenkron boşluktan sonra context kullanımı için mounted kontrolü eklendi.
+    if (!mounted) return;
     final TextEditingController nameController = TextEditingController(text: userName);
     final TextEditingController surnameController = TextEditingController(text: userSurname);
 
@@ -149,7 +158,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           content: SingleChildScrollView(
             child: ListBody(
               children: <Widget>[
-                const Text('Adınızı ve soyadınızı giriniz.'),
                 TextFormField(
                   controller: nameController,
                   decoration: const InputDecoration(labelText: 'Ad'),
@@ -178,6 +186,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     'surname': surnameController.text.trim(),
                   });
                 }
+                // HATA DÜZELTMESİ: Asenkron boşluktan sonra context kullanımı için mounted kontrolü eklendi.
                 if (mounted) {
                   Navigator.of(context).pop();
                 }
@@ -189,183 +198,150 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  /// --- SAĞ ÜSTTE 3 NOKTA MENÜ ---
-  Widget _buildPopupMenu() {
-    return PopupMenuButton<String>(
-      icon: const Icon(Icons.more_vert, color: Colors.white),
-      onSelected: (value) async {
-        if (value == 'settings') {
-          // Ayarlar seçildi
-        } else if (value == 'language') {
-          // Dil seçildi
-        } else if (value == 'logout') {
-          await _auth.signOut();
-          if (mounted) {
-            Navigator.pushReplacementNamed(context, LoginScreen.routeName);
-          }
-        }
-      },
-      itemBuilder: (BuildContext context) => [
-        const PopupMenuItem(
-          value: 'settings',
-          child: Text('Ayarlar'),
-        ),
-        const PopupMenuItem(
-          value: 'language',
-          child: Text('Dil'),
-        ),
-        const PopupMenuItem(
-          value: 'logout',
-          child: Text('Çıkış'),
-        ),
-      ],
-    );
+  Future<void> _logout() async {
+    await _auth.signOut();
+    // HATA DÜZELTMESİ: Asenkron boşluktan sonra context kullanımı için mounted kontrolü eklendi.
+    if (mounted) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+            (Route<dynamic> route) => false,
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF6B45A6), Color(0xFF9B45C6)],
-            begin: Alignment.bottomLeft,
-            end: Alignment.topRight,
-          ),
-        ),
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : CustomScrollView(
-          slivers: [
-            SliverAppBar(
-              backgroundColor: Colors.transparent,
-              expandedHeight: 250.0,
-              pinned: true,
-              actions: [
-                _buildPopupMenu(), // sağ üst 3 nokta menü
-              ],
-              flexibleSpace: LayoutBuilder(
-                builder: (BuildContext context, BoxConstraints constraints) {
-                  final double currentHeight = constraints.biggest.height;
-                  final double maxExtent = 250.0;
-                  final double minExtent = kToolbarHeight + MediaQuery.of(context).padding.top;
-                  final double t = (1.0 - (currentHeight - minExtent) / (maxExtent - minExtent)).clamp(0.0, 1.0);
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-                  return Container(
-                    color: Color.lerp(Colors.transparent, const Color(0xFF6B45A6), t),
-                    child: FlexibleSpaceBar(
-                      title: Opacity(
-                        opacity: t,
-                        child: const Text(
-                          'Profil',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+    return Scaffold(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            backgroundColor: Colors.transparent,
+            expandedHeight: 280.0,
+            pinned: true,
+            flexibleSpace: LayoutBuilder(
+              builder: (BuildContext context, BoxConstraints constraints) {
+                final double top = constraints.biggest.height;
+                final bool isCollapsed = top <= kToolbarHeight + MediaQuery.of(context).padding.top + 20;
+
+                return FlexibleSpaceBar(
+                  title: isCollapsed
+                      ? Text(
+                    'Profil',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(color: isDarkMode ? Colors.white : Colors.black),
+                  )
+                      : null,
+                  centerTitle: true,
+                  background: Container(
+                     decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: isDarkMode
+                            ? [Colors.black, Colors.grey[900]!]
+                            // HATA DÜZELTMESİ: 'MyApp.backgroundColor' tanımsızdı.
+                            // Temaya uygun 'scaffoldBackgroundColor' kullanıldı.
+                            // 'withOpacity' yerine modern '.withAlpha()' kullanıldı.
+                            : [Theme.of(context).scaffoldBackgroundColor, MyApp.primaryColor.withAlpha(26)],
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
                       ),
-                      centerTitle: true,
-                      background: Stack(
-                        children: [
-                          Align(
-                            alignment: Alignment.center,
-                            child: Column(
+                    ),
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 40.0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            GestureDetector(
+                              onTap: _showAvatarSelectionDialog,
+                              child: CircleAvatar(
+                                radius: 70,
+                                backgroundColor: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+                                backgroundImage: userPhotoUrl != null && userPhotoUrl!.isNotEmpty
+                                    ? (userPhotoUrl!.startsWith('http')
+                                    ? NetworkImage(userPhotoUrl!)
+                                    : AssetImage(userPhotoUrl!) as ImageProvider)
+                                    : null,
+                                child: userPhotoUrl == null || userPhotoUrl!.isEmpty
+                                    ? Icon(Icons.person, size: 70, color: isDarkMode ? Colors.white70 : MyApp.primaryColor)
+                                    : null,
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                GestureDetector(
-                                  onTap: _showAvatarSelectionDialog,
-                                  child: CircleAvatar(
-                                    radius: 70,
-                                    backgroundColor: Colors.white,
-                                    backgroundImage: userPhotoUrl != null && userPhotoUrl!.isNotEmpty
-                                        ? (userPhotoUrl!.startsWith('http')
-                                        ? NetworkImage(userPhotoUrl!)
-                                        : AssetImage(userPhotoUrl!) as ImageProvider)
-                                        : null,
-                                    child: userPhotoUrl == null || userPhotoUrl!.isEmpty
-                                        ? const Icon(Icons.person, size: 70, color: Colors.deepPurple)
-                                        : null,
-                                  ),
+                                Text(
+                                  '${userName ?? 'Kullanıcı'} ${userSurname ?? ''}'.trim(),
+                                  style: Theme.of(context).textTheme.headlineSmall,
                                 ),
-                                const SizedBox(height: 20),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      '${userName ?? 'Kullanıcı Adı'} ${userSurname ?? ''}',
-                                      style: const TextStyle(
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    IconButton(
-                                      onPressed: _showEditProfileDialog,
-                                      icon: const Icon(Icons.edit, color: Colors.white),
-                                      tooltip: 'Profili Düzenle',
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 10),
-                                Opacity(
-                                  opacity: 1.0 - t,
-                                  child: Text(
-                                    userEmail ?? 'E-posta Yok',
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.white70,
-                                    ),
-                                  ),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  onPressed: _showEditProfileDialog,
+                                  icon: Icon(Icons.edit, color: isDarkMode ? Colors.white70 : Colors.grey[600]),
+                                  tooltip: 'Profili Düzenle',
                                 ),
                               ],
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 5),
+                            Text(
+                              userEmail ?? 'E-posta Yok',
+                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: isDarkMode ? Colors.white70 : Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  );
-                },
+                  ),
+                );
+              },
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Uygulama Hakkında',
+                     style: Theme.of(context).textTheme.titleLarge
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'RizzBot, yapay zeka destekli bir sohbet robotu uygulamasıdır. Amacımız, kullanıcılarımıza kişiselleştirilmiş ve eğlenceli sohbet deneyimleri sunmaktır. Bu uygulama Flutter ve Firebase teknolojileri kullanılarak geliştirilmiştir.',
+                    style: Theme.of(context).textTheme.bodyMedium
+                  ),
+                  const SizedBox(height: 15),
+                  Text(
+                    'Geliştirici Notları: Uygulama, sürekli olarak yeni özellikler ve iyileştirmelerle güncellenmektedir. Kullanıcı deneyimini en üst seviyeye çıkarmak için geri bildirimleriniz bizim için çok değerlidir.',
+                     style: Theme.of(context).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic)
+                  ),
+                  const SizedBox(height: 40),
+                  ElevatedButton.icon(
+                    onPressed: _logout,
+                    icon: const Icon(Icons.logout),
+                    label: const Text('Çıkış Yap'),
+                    style: ElevatedButton.styleFrom(
+                      // HATA DÜZELTMESİ: 'withOpacity' yerine modern '.withAlpha()' kullanıldı.
+                      backgroundColor: isDarkMode ? Colors.red.withAlpha(204) : Colors.red,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text(
-                      'Uygulama Hakkında',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    SizedBox(height: 10),
-                    Text(
-                      'RizzBot, yapay zeka destekli bir sohbet robotu uygulamasıdır. Amacımız, kullanıcılarımıza kişiselleştirilmiş ve eğlenceli sohbet deneyimleri sunmaktır. Bu uygulama Flutter ve Firebase teknolojileri kullanılarak geliştirilmiştir.',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white70,
-                      ),
-                    ),
-                    SizedBox(height: 15),
-                    Text(
-                      'Geliştirici Notları: Uygulama, sürekli olarak yeni özellikler ve iyileştirmelerle güncellenmektedir. Kullanıcı deneyimini en üst seviyeye çıkarmak için geri bildirimleriniz bizim için çok değerlidir.',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontStyle: FontStyle.italic,
-                        color: Colors.white54,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

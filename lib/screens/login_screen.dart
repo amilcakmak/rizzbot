@@ -1,12 +1,16 @@
+
 // lib/screens/login_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:rizzbot/screens/profile_screen.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:provider/provider.dart';
+import 'package:rizzbot/auth_service.dart';
+import 'package:rizzbot/main.dart';
+import 'package:rizzbot/providers/theme_provider.dart';
+import 'package:rizzbot/screens/main_screen.dart';
 import 'package:rizzbot/screens/signup_screen.dart';
-import 'package:animated_text_kit/animated_text_kit.dart';
-import 'dart:math';
 
 class LoginScreen extends StatefulWidget {
   static const String routeName = '/login-screen';
@@ -16,114 +20,156 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+class _LoginScreenState extends State<LoginScreen> {
+  // Merkezi kimlik doğrulama servisimizi kullanıyoruz.
+  late final AuthService _authService;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  late final AnimationController _controller;
-  late final Animation<double> _animation;
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 100),
-      vsync: this,
-    );
-    _animation = Tween<double>(begin: 0, end: 5).animate(_controller);
+    // AuthService'i başlatıyoruz.
+    _authService = FirebaseAuthService(FirebaseAuth.instance);
   }
 
   @override
   void dispose() {
-    _controller.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  void _startShake() {
-    _controller.forward(from: 0.0).then((_) {
-      _controller.reverse();
-    });
-  }
-
   Future<void> _signInWithEmail() async {
-    try {
-      if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
-        _showErrorDialog('E-posta ve şifre boş bırakılamaz.');
-        return;
-      }
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      _showErrorDialog('E-posta ve şifre boş bırakılamaz.');
+      return;
+    }
 
-      await _auth.signInWithEmailAndPassword(
-        email: _emailController.text,
-        password: _passwordController.text,
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await _authService.loginWithEmail(
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
       );
 
-      // Giriş başarılı olduktan sonra doğrudan profil ekranına yönlendir
-      Navigator.pushNamedAndRemoveUntil(
-          context, ProfileScreen.routeName, (route) => false);
+      if (mounted) {
+        Navigator.pushNamedAndRemoveUntil(
+            context, MainScreen.routeName, (route) => false);
+      }
     } on FirebaseAuthException catch (e) {
+      // Artık Firebase'den gelen özel hata kodlarına göre kullanıcıya anlamlı mesajlar gösteriyoruz.
       String errorMessage = 'Giriş başarısız oldu.';
-      if (e.code == 'user-not-found') {
-        errorMessage = 'Bu e-posta adresine sahip bir kullanıcı bulunamadı.';
+      if (e.code == 'user-not-found' || e.code == 'invalid-credential') {
+        errorMessage = 'Bu e-posta veya şifre ile bir hesap bulunamadı.';
       } else if (e.code == 'wrong-password') {
         errorMessage = 'Yanlış şifre. Lütfen tekrar deneyin.';
       } else {
-        errorMessage = e.message ?? errorMessage;
+        errorMessage = 'Bir hata oluştu: ${e.message}';
       }
-      _showErrorDialog(errorMessage);
+      if (mounted) {
+        _showErrorDialog(errorMessage);
+      }
     } catch (e) {
-      _showErrorDialog('Bir hata oluştu: $e');
+      if (mounted) {
+        _showErrorDialog('Beklenmedik bir hata oluştu: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
   Future<void> _signInWithGoogle() async {
+    setState(() {
+      _isLoading = true;
+    });
     try {
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
-        return;
+         if (mounted) setState(() => _isLoading = false);
+        return; // Kullanıcı girişi iptal etti
       }
 
-      final GoogleSignInAuthentication googleAuth =
-      await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
       final AuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      final UserCredential userCredential =
-      await _auth.signInWithCredential(credential);
+      // Google ile girişi de merkezi instance üzerinden yapıyoruz.
+      await FirebaseAuth.instance.signInWithCredential(credential);
 
-      if (userCredential.user != null) {
+      if (mounted) {
         Navigator.pushNamedAndRemoveUntil(
-            context, ProfileScreen.routeName, (route) => false);
-      }
-    } on FirebaseAuthException catch (e) {
-      if (e.code == 'account-exists-with-different-credential') {
-        _showErrorDialog(
-            'Bu e-posta farklı bir giriş yöntemiyle zaten kullanılıyor.');
-      } else if (e.code == 'invalid-credential') {
-        _showErrorDialog('Geçersiz kimlik bilgileri.');
-      } else {
-        _showErrorDialog('Giriş başarısız oldu: ${e.message}');
+            context, MainScreen.routeName, (route) => false);
       }
     } catch (e) {
-      _showErrorDialog('Bir hata oluştu: $e');
+      if (mounted) {
+        _showErrorDialog('Google ile giriş sırasında bir hata oluştu: $e');
+      }
+    } finally {
+       if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _resetPassword() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      _showErrorDialog('Şifre sıfırlama için lütfen e-posta adresinizi girin.');
+      return;
+    }
+
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Şifre sıfırlama e-postası gönderildi.')),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      String errorMessage = 'Bir hata oluştu.';
+      if (e.code == 'user-not-found') {
+        errorMessage = 'Bu e-posta adresine sahip bir kullanıcı bulunamadı.';
+      }
+      if (mounted) {
+        _showErrorDialog(errorMessage);
+      }
+    } catch (e) {
+      if (mounted) {
+        _showErrorDialog('Bir hata oluştu: $e');
+      }
     }
   }
 
   void _showErrorDialog(String message) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Hata'),
-          content: Text(message),
+          backgroundColor: isDarkMode ? Colors.grey[900] : Colors.white,
+          title: Text('Giriş Hatası', style: Theme.of(context).textTheme.titleLarge),
+          content: Text(message, style: Theme.of(context).textTheme.bodyMedium),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Tamam'),
+              child: Text('Tamam',
+                  style: TextStyle(
+                      color: isDarkMode ? Colors.white : MyApp.primaryColor,
+                      fontWeight: FontWeight.bold)),
             ),
           ],
         );
@@ -134,115 +180,86 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color(0xFF2B2B4F),
-              Color(0xFF6B45A6),
-              Color(0xFF9B45C6),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 20.0, top: 10.0),
+            child: ThemeToggleButton(),
           ),
-        ),
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                AnimatedBuilder(
-                  animation: _animation,
-                  builder: (context, child) {
-                    return Transform.translate(
-                      offset: Offset(sin(_animation.value) * 5, 0),
-                      child: AnimatedTextKit(
-                        animatedTexts: [
-                          TypewriterAnimatedText(
-                            'Rizz Bot',
-                            textStyle: const TextStyle(
-                              fontSize: 48.0,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              letterSpacing: 5.0,
-                            ),
-                            speed: const Duration(milliseconds: 150),
-                            cursor: '|',
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                        repeatForever: true,
-                        onNext: (p0, p1) {
-                          if (p0 % 3 == 0) {
-                            _startShake();
-                          }
-                        },
+        ],
+      ),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Rizz Bot',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                    fontSize: 60,
+                    fontWeight: FontWeight.bold,
+                    shadows: [
+                      const Shadow(
+                        blurRadius: 10.0,
+                        color: Colors.black26,
+                        offset: Offset(2.0, 2.0),
                       ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 50),
-                TextField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    labelText: 'E-posta',
-                    labelStyle: TextStyle(color: Colors.white.withOpacity(0.8)),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.white.withOpacity(0.5), width: 1.5),
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: const BorderSide(color: Colors.white, width: 2.0),
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    filled: true,
-                    fillColor: Colors.white.withOpacity(0.1),
+                    ]),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Tekrar hoş geldin',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white70
+                        : MyApp.primaryColor,
+                    fontWeight: FontWeight.normal),
+              ),
+              const SizedBox(height: 50),
+              TextField(
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(hintText: 'E-posta'),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: _passwordController,
+                obscureText: true,
+                decoration: const InputDecoration(hintText: 'Şifre'),
+              ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: _resetPassword,
+                  child: Text(
+                    'Şifremi Unuttum?',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white70
+                              : MyApp.primaryColor,
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                 ),
-                const SizedBox(height: 20),
-                TextField(
-                  controller: _passwordController,
-                  obscureText: true,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    labelText: 'Şifre',
-                    labelStyle: TextStyle(color: Colors.white.withOpacity(0.8)),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.white.withOpacity(0.5), width: 1.5),
-                      borderRadius: BorderRadius.circular(15),
+              ),
+              const SizedBox(height: 10),
+              _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : ElevatedButton(
+                      onPressed: _signInWithEmail,
+                      child: const Text('Giriş Yap'),
                     ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: const BorderSide(color: Colors.white, width: 2.0),
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    filled: true,
-                    fillColor: Colors.white.withOpacity(0.1),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: _signInWithEmail,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    minimumSize: const Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                  ),
-                  child: const Text(
-                    'E-posta ile Giriş Yap',
-                    style: TextStyle(color: Colors.black),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                _buildGoogleSignInButton(),
-                const SizedBox(height: 20),
-                _buildEmailSignUpButton(),
-              ],
-            ),
+              const SizedBox(height: 20),
+              _isLoading ? const SizedBox.shrink() : _buildGoogleSignInButton(),
+              const SizedBox(height: 20),
+               _isLoading ? const SizedBox.shrink() : _buildSignUpButton(),
+            ],
           ),
         ),
       ),
@@ -252,37 +269,88 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   Widget _buildGoogleSignInButton() {
     return ElevatedButton.icon(
       onPressed: _signInWithGoogle,
-      icon: Image.network(
-        'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/2048px-Google_%22G%22_logo.svg.png',
-        height: 24,
-      ),
-      label: const Text('Google ile Giriş Yap'),
       style: ElevatedButton.styleFrom(
-        foregroundColor: Colors.black87,
-        backgroundColor: Colors.white,
-        minimumSize: const Size(double.infinity, 50),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(15),
-        ),
+        backgroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.white,
+        foregroundColor: MyApp.primaryColor,
+        elevation: 2,
+        shadowColor: Colors.black38,
       ),
+      icon: const FaIcon(FontAwesomeIcons.google, size: 20),
+      label: Text('Google ile Devam Et',
+          style: Theme.of(context)
+              .textTheme
+              .labelLarge
+              ?.copyWith(color: MyApp.primaryColor)),
     );
   }
 
-  Widget _buildEmailSignUpButton() {
-    return OutlinedButton.icon(
-      onPressed: () {
-        Navigator.pushNamed(context, SignUpScreen.routeName);
-      },
-      icon: const Icon(Icons.email, color: Colors.white),
-      label: const Text('E-posta ile Kayıt Ol'),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: Colors.white,
-        side: const BorderSide(color: Colors.white, width: 2),
-        minimumSize: const Size(double.infinity, 50),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(15),
+  Widget _buildSignUpButton() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text("Hesabın yok mu?", style: Theme.of(context).textTheme.bodyMedium),
+        TextButton(
+          onPressed: () {
+            Navigator.pushNamed(context, SignUpScreen.routeName);
+          },
+          child: Text(
+            'Kayıt Ol',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).brightness == Brightness.dark ? Colors.white : MyApp.primaryColor,
+                  fontWeight: FontWeight.bold,
+                  decoration: TextDecoration.underline,
+                ),
+          ),
         ),
-      ),
+      ],
+    );
+  }
+}
+
+
+// --- Animasyonlu Tema Butonu ---
+class ThemeToggleButton extends StatelessWidget {
+  const ThemeToggleButton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        final isDarkMode = themeProvider.themeMode == ThemeMode.dark;
+        return GestureDetector(
+          onTap: () {
+            themeProvider.toggleTheme();
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            width: 80,
+            height: 40,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              color: isDarkMode ? Colors.grey[850] : Colors.grey[200],
+            ),
+            child: Stack(
+              children: [
+                AnimatedPositioned(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeIn,
+                  left: isDarkMode ? 45.0 : 5.0,
+                  right: isDarkMode ? 5.0 : 45.0,
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    transitionBuilder: (Widget child, Animation<double> animation) {
+                      return RotationTransition(turns: animation, child: child);
+                    },
+                    child: isDarkMode
+                        ? Icon(Icons.nightlight_round, color: Colors.white, key: UniqueKey())
+                        : Icon(Icons.wb_sunny_rounded, color: Colors.orange, key: UniqueKey()),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -1,55 +1,45 @@
 // lib/auth_service.dart
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
-
-Future<void> initializeFirebase() async {
-  await Firebase.initializeApp();
-}
 
 abstract class AuthService {
-  Future<String> registerWithEmail(String email, String password);
-  Future<bool> loginWithEmail(String email, String password);
+  Future<UserCredential> registerWithEmail(String email, String password);
+  Future<UserCredential> loginWithEmail(String email, String password);
   Future<void> logout();
-  Future<bool> isPremiumMember();
-
-  static final firebaseAuth = FirebaseAuth.instance;
+  User? get currentUser;
+  // DÜZELTME: Bu bir metot olmalı, getter değil.
+  Stream<User?> authStateChanges();
 }
 
 class FirebaseAuthService implements AuthService {
+  final FirebaseAuth _firebaseAuth;
+
+  FirebaseAuthService(this._firebaseAuth);
+
   @override
-  Future<String> registerWithEmail(String email, String password) async {
-    try {
-      await AuthService.firebaseAuth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      return "success";
-    } catch (e) {
-      throw Exception("Kayıt hatası: $e");
-    }
+  Future<UserCredential> registerWithEmail(String email, String password) {
+    return _firebaseAuth.createUserWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
   }
 
   @override
-  Future<bool> loginWithEmail(String email, String password) async {
-    try {
-      await AuthService.firebaseAuth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      return true;
-    } catch (e) {
-      return false;
-    }
+  Future<UserCredential> loginWithEmail(String email, String password) {
+    return _firebaseAuth.signInWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
   }
 
   @override
-  Future<void> logout() async {
-    await AuthService.firebaseAuth.signOut();
+  Future<void> logout() {
+    return _firebaseAuth.signOut();
   }
 
   @override
-  Future<bool> isPremiumMember() async {
-    // Firebase Firestore’da kontrol yapabilirsin.
-    return true; // Placeholder
-  }
+  User? get currentUser => _firebaseAuth.currentUser;
+
+  @override
+  // DÜZELTME: Metot çağrılmalı (parantezler eklendi).
+  Stream<User?> authStateChanges() => _firebaseAuth.authStateChanges();
 }
