@@ -7,18 +7,18 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:418811908380:android:06cda83c1650326b01ead9",
+        "mobilesdk_app_id": "1:418811908380:android:a7557769172f388e01ead9",
         "android_client_info": {
-          "package_name": "com.example.rizzbot"
+          "package_name": "com.rootcrack.rizzbot"
         }
       },
       "oauth_client": [
         {
-          "client_id": "418811908380-195sk2a02cgpos81cdnsest4u7s6gi26.apps.googleusercontent.com",
+          "client_id": "418811908380-3mtr2rbj7u7lb8s1n9niqajmll9pg628.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.example.rizzbot",
-            "certificate_hash": "518d733169efc21cb2693af6c1ffbc96a1374365"
+            "package_name": "com.rootcrack.rizzbot",
+            "certificate_hash": "ec3a258598cd81dbc192fd798792da8a59f2cd3a"
           }
         },
         {

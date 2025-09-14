@@ -1,0 +1,5 @@
+package com.rootcrack.rizzbot
+
+import io.flutter.embedding.android.FlutterActivity
+
+class MainActivity : FlutterActivity()

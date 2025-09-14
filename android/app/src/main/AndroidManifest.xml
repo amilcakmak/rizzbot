@@ -1,6 +1,7 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.rootcrack.rizzbot">
     <application
-        android:label="rizzbot"
+        android:label="RizzBot"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
