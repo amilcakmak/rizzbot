@@ -5,7 +5,6 @@ import 'package:rizzbot/screens/profile_screen.dart';
 import 'package:rizzbot/screens/login_screen.dart';
 import 'dart:async';
 import 'dart:math';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -66,51 +65,53 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    final User? user = _auth.currentUser;
-
     if (_isLoading) {
       return const Center(
         child: CircularProgressIndicator(),
       );
     }
 
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        AnimatedBuilder(
-          animation: _controller!,
-          builder: (context, child) {
-            final offset = sin(_controller!.value * 2 * pi) * 4;
-            return Transform.translate(
-              offset: Offset(0, offset),
-              child: child,
-            );
-          },
-          child: Text(
-            AppLocalizations.of(context)!.homeScreenSwayingText,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-              height: 1.5,
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              "✨ RizzBot’a Hoş Geldin! ✨",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
+            const SizedBox(height: 20),
+            const Text(
+              "“Onu etkilemek mi istiyorsun? 💫\n"
+              "Yoksa işi büyütüp tamamen elde etmek mi?\n"
+              "Belki de sadece kendinden soğutmadan muhabbeti akıcı tutmak istiyorsun…\n\n"
+              "Ne düşünürsen düşün, doğru yerdesin.\n"
+              "RizzBot senin gizli silahın — en doğru cümleleri, en doğru anda sana fısıldar.\n"
+              "Şimdi vakit kaybetme, hamleni yap ve farkını ortaya koy. 😉”",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 40),
+            // You can re-add the user-specific welcome message if you like
+            // For example:
+            // Text(
+            //   "Hoş geldin, ${user?.displayName ?? 'Kullanıcı'}",
+            //   style: const TextStyle(
+            //     fontSize: 22,
+            //     fontWeight: FontWeight.bold,
+            //   ),
+            // ),
+          ],
         ),
-        const SizedBox(height: 30),
-
-        Text(
-          AppLocalizations.of(context)!.homeScreenWelcome(user?.displayName ?? AppLocalizations.of(context)!.user),
-          style: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 10),
-        Text(
-          AppLocalizations.of(context)!.homeScreenEmail(user?.email ?? AppLocalizations.of(context)!.notAvailable),
-          style: const TextStyle(fontSize: 16),
-        ),
-      ],
+      ),
     );
   }
 }

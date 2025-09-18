@@ -5,7 +5,6 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:rizzbot/main.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class ChatScreen extends StatefulWidget {
   static const String routeName = '/chat-screen';
@@ -25,13 +24,11 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Initialize chip labels here because it depends on context.
-    final l10n = AppLocalizations.of(context)!;
     _chipLabels = [
-      l10n.styleFlirtatious,
-      l10n.styleEngaging,
-      l10n.styleWitty,
-      l10n.styleCreative
+      "Flörtöz",
+      "İlgi Çekici",
+      "Esprili",
+      "Yaratıcı"
     ];
   }
 
@@ -62,20 +59,19 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _resetChat() async {
-    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(l10n.titleResetChat),
-        content: Text(l10n.bodyResetChat),
+        title: const Text("Sohbeti Sıfırla"),
+        content: const Text("Bu eylem sohbet geçmişini kalıcı olarak silecek. Devam etmek istiyor musunuz?"),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(l10n.cancelButton),
+            child: const Text("İptal"),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(l10n.confirmDeleteButton),
+            child: const Text("Sil"),
           ),
         ],
       ),
@@ -117,14 +113,13 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _sendMessage() async {
-    final l10n = AppLocalizations.of(context)!;
     if (_controller.text.isEmpty) return;
 
     final userMessageText = _controller.text;
     var promptForModel = userMessageText;
     if (_selectedChipIndex != null) {
       final selectedStyle = _chipLabels[_selectedChipIndex!];
-      promptForModel = l10n.geminiPrompt(selectedStyle, userMessageText);
+      promptForModel = "Aşağıdaki metne '${selectedStyle}' bir tarzda yanıt ver: $userMessageText";
     }
 
     if (mounted) {
@@ -140,11 +135,11 @@ class _ChatScreenState extends State<ChatScreen> {
     try {
       final apiKey = dotenv.env['GEMINI_API_KEY'];
       if (apiKey == null) {
-        _showErrorDialog(l10n.errorApiKeyNotFound);
+        _showErrorDialog("API anahtarı bulunamadı.");
         return;
       }
 
-      final systemInstruction = Content.text(l10n.geminiSystemInstruction);
+      final systemInstruction = Content.text("Sen bir sohbet asistanısın. Görevin, kullanıcının girdiği metne göre yaratıcı ve ilgi çekici yanıtlar vermektir.");
 
       final model = GenerativeModel(
         model: 'gemini-1.5-flash',
@@ -172,11 +167,11 @@ class _ChatScreenState extends State<ChatScreen> {
         });
         await _saveMessages();
       } else {
-        _showErrorDialog(l10n.errorNoResponse);
+        _showErrorDialog("Yanıt alınamadı.");
       }
     } catch (e) {
       if (!mounted) return;
-      _showErrorDialog(l10n.errorCouldNotSendMessage);
+      _showErrorDialog("Mesaj gönderilemedi.");
     }
 
     if (mounted) {
@@ -189,17 +184,16 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _showErrorDialog(String message) {
     if (!mounted) return;
-    final l10n = AppLocalizations.of(context)!;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: isDarkMode ? Colors.grey[900] : Colors.white,
-        title: Text(l10n.titleError),
+        title: const Text("Hata"),
         content: Text(message),
         actions: <Widget>[
           TextButton(
-            child: Text(l10n.okButton),
+            child: const Text("Tamam"),
             onPressed: () {
               Navigator.of(ctx).pop();
             },
@@ -211,7 +205,6 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       body: SafeArea(
@@ -237,7 +230,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             onPressed: () {
                               Clipboard.setData(ClipboardData(text: message['content']!));
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(l10n.infoMessageCopied)),
+                                const SnackBar(content: Text("Mesaj kopyalandı.")),
                               );
                             },
                           ),
@@ -319,8 +312,8 @@ class _ChatScreenState extends State<ChatScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 12.0),
                     child: TextField(
                       controller: _controller,
-                      decoration: InputDecoration.collapsed(
-                        hintText: l10n.chatHintText,
+                      decoration: const InputDecoration.collapsed(
+                        hintText: "Mesajınızı buraya yazın...",
                       ),
                       maxLines: 5,
                       minLines: 1,
@@ -336,12 +329,12 @@ class _ChatScreenState extends State<ChatScreen> {
                           IconButton(
                             icon: const Icon(Icons.history_edu_outlined),
                             onPressed: _showConversationBuilderDialog,
-                            tooltip: l10n.titleConversationBuilder,
+                            tooltip: "Sohbet Oluşturucu",
                           ),
                           IconButton(
                             icon: const Icon(Icons.delete_outline),
                             onPressed: _resetChat,
-                            tooltip: l10n.tooltipClearChat,
+                            tooltip: "Sohbeti Temizle",
                           ),
                         ],
                       ),
@@ -350,8 +343,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         onPressed: _sendMessage,
                         color: Theme.of(context).primaryColor,
                       ),
-                    ],
-                  ),
+                    ],                  ),
                 ],
               ),
             ),
@@ -375,8 +367,8 @@ class __ConversationBuilderDialogState extends State<_ConversationBuilderDialog>
   @override
   void initState() {
     super.initState();
-    _addBlock('he/she');
-    _addBlock('me');
+    _addBlock('O');
+    _addBlock('Ben');
   }
 
   void _addBlock(String speaker) {
@@ -409,9 +401,8 @@ class __ConversationBuilderDialogState extends State<_ConversationBuilderDialog>
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     return AlertDialog(
-      title: Text(l10n.titleConversationBuilder),
+      title: const Text("Sohbet Oluşturucu"),
       content: SizedBox(
         width: double.maxFinite,
         child: ListView.builder(
@@ -434,21 +425,21 @@ class __ConversationBuilderDialogState extends State<_ConversationBuilderDialog>
       ),
       actions: [
         TextButton(
-          onPressed: () => _addBlock('he/she'),
-          child: Text(l10n.addButtonHeShe),
+          onPressed: () => _addBlock('O'),
+          child: const Text("O Ekle"),
         ),
         TextButton(
-          onPressed: () => _addBlock('me'),
-          child: Text(l10n.addButtonMe),
+          onPressed: () => _addBlock('Ben'),
+          child: const Text("Ben Ekle"),
         ),
         const Spacer(),
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: Text(l10n.cancelButton),
+          child: const Text("İptal"),
         ),
         ElevatedButton(
           onPressed: _insertConversation,
-          child: Text(l10n.addButton),
+          child: const Text("Ekle"),
         ),
       ],
       actionsAlignment: MainAxisAlignment.end,

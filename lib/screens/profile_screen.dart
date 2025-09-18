@@ -6,7 +6,6 @@ import 'package:rizzbot/screens/login_screen.dart';
 import 'dart:math';
 import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class ProfileScreen extends StatefulWidget {
   static const String routeName = '/profile-screen';
@@ -95,7 +94,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       builder: (BuildContext context) {
         return AlertDialog(
           backgroundColor: isDarkMode ? Colors.grey[900] : Colors.white,
-          title: Text(AppLocalizations.of(context)!.selectAvatarTitle),
+          title: const Text("Avatar Seç"),
           content: SizedBox(
             width: double.maxFinite,
             height: 400.0,
@@ -131,7 +130,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           actions: <Widget>[
             TextButton(
-              child: Text(AppLocalizations.of(context)!.closeButton),
+              child: const Text("Kapat"),
               onPressed: () {
                 Navigator.of(context).pop();
               },
@@ -151,30 +150,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text(AppLocalizations.of(context)!.editProfileTitle),
+          title: const Text("Profili Düzenle"),
           content: SingleChildScrollView(
             child: ListBody(
               children: <Widget>[
                 TextFormField(
                   controller: nameController,
-                  decoration: InputDecoration(labelText: AppLocalizations.of(context)!.nameLabel),
+                  decoration: const InputDecoration(labelText: "Ad"),
                 ),
                 TextFormField(
                   controller: surnameController,
-                  decoration: InputDecoration(labelText: AppLocalizations.of(context)!.surnameLabel),
+                  decoration: const InputDecoration(labelText: "Soyad"),
                 ),
               ],
             ),
           ),
           actions: <Widget>[
             TextButton(
-              child: Text(AppLocalizations.of(context)!.cancelButton),
+              child: const Text("İptal"),
               onPressed: () {
                 Navigator.of(context).pop();
               },
             ),
             ElevatedButton(
-              child: Text(AppLocalizations.of(context)!.saveButton),
+              child: const Text("Kaydet"),
               onPressed: () async {
                 final user = _auth.currentUser;
                 if (user != null) {
@@ -226,7 +225,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 return FlexibleSpaceBar(
                   title: isCollapsed
                       ? Text(
-                    AppLocalizations.of(context)!.profileTitle,
+                    "Profil",
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(color: isDarkMode ? Colors.white : Colors.black),
                   )
                       : null,
@@ -267,20 +266,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
-                                  '${userName ?? AppLocalizations.of(context)!.user} ${userSurname ?? ''}'.trim(),
+                                  '${userName ?? "Kullanıcı"} ${userSurname ?? ''}'.trim(),
                                   style: Theme.of(context).textTheme.headlineSmall,
                                 ),
                                 const SizedBox(width: 8),
                                 IconButton(
                                   onPressed: _showEditProfileDialog,
                                   icon: Icon(Icons.edit, color: isDarkMode ? Colors.white70 : Colors.grey[600]),
-                                  tooltip: AppLocalizations.of(context)!.editProfileTitle,
+                                  tooltip: "Profili Düzenle",
                                 ),
                               ],
                             ),
                             const SizedBox(height: 5),
                             Text(
-                              userEmail ?? AppLocalizations.of(context)!.emailNotAvailable,
+                              userEmail ?? "E-posta Yok",
                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 color: isDarkMode ? Colors.white70 : Colors.grey[600],
                               ),
@@ -301,24 +300,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    AppLocalizations.of(context)!.aboutAppTitle,
+                    "Uygulama Hakkında",
                      style: Theme.of(context).textTheme.titleLarge
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    AppLocalizations.of(context)!.aboutAppText,
+                    "Bu uygulama, sohbetlerinizde size yardımcı olmak için tasarlanmıştır. Yaratıcı ve etkili cevaplar bularak iletişiminizi güçlendirin.",
                     style: Theme.of(context).textTheme.bodyMedium
                   ),
                   const SizedBox(height: 15),
                   Text(
-                    AppLocalizations.of(context)!.developerNotesText,
+                    "Unutma, RizzBot bir yardımcıdır. Önerileri kendi süzgecinden geçirerek, sohbetin doğal akışına uygun şekilde kullanmak en iyisidir.",
                      style: Theme.of(context).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic)
                   ),
                   const SizedBox(height: 40),
                   ElevatedButton.icon(
                     onPressed: _logout,
                     icon: const Icon(Icons.logout),
-                    label: Text(AppLocalizations.of(context)!.logoutButton),
+                    label: const Text("Çıkış Yap"),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: isDarkMode ? Colors.red.withAlpha(204) : Colors.red,
                       foregroundColor: Colors.white,

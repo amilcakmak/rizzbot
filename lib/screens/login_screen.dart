@@ -8,7 +8,6 @@ import 'package:rizzbot/main.dart';
 import 'package:rizzbot/providers/theme_provider.dart';
 import 'package:rizzbot/screens/main_screen.dart';
 import 'package:rizzbot/screens/signup_screen.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class LoginScreen extends StatefulWidget {
   static const String routeName = '/login-screen';
@@ -39,9 +38,8 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _signInWithEmail() async {
-    final l10n = AppLocalizations.of(context)!;
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
-      _showErrorDialog(l10n.errorEmailPasswordEmpty);
+      _showErrorDialog("Lütfen e-posta ve şifrenizi girin.");
       return;
     }
 
@@ -60,20 +58,20 @@ class _LoginScreenState extends State<LoginScreen> {
             context, MainScreen.routeName, (route) => false);
       }
     } on FirebaseAuthException catch (e) {
-      String errorMessage = l10n.errorLoginFailed;
+      String errorMessage = "Giriş işlemi başarısız. Lütfen tekrar deneyin.";
       if (e.code == 'user-not-found' || e.code == 'invalid-credential') {
-        errorMessage = l10n.errorUserNotFound;
+        errorMessage = "Geçersiz e-posta veya şifre.";
       } else if (e.code == 'wrong-password') {
-        errorMessage = l10n.errorWrongPassword;
+        errorMessage = "Geçersiz e-posta veya şifre.";
       } else {
-        errorMessage = l10n.errorGenericWithCode(e.message ?? '');
+        errorMessage = "Bir hata oluştu: ${e.message}";
       }
       if (mounted) {
         _showErrorDialog(errorMessage);
       }
     } catch (e) {
       if (mounted) {
-        _showErrorDialog(l10n.errorUnexpected(e.toString()));
+        _showErrorDialog("Beklenmedik bir hata oluştu: $e");
       }
     } finally {
       if (mounted) {
@@ -85,7 +83,6 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _signInWithGoogle() async {
-    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _isLoading = true;
     });
@@ -110,7 +107,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       if (mounted) {
-        _showErrorDialog(l10n.errorGoogleSignIn(e.toString()));
+        _showErrorDialog("Google ile giriş başarısız: $e");
       }
     } finally {
        if (mounted) {
@@ -122,10 +119,9 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _resetPassword() async {
-    final l10n = AppLocalizations.of(context)!;
     final email = _emailController.text.trim();
     if (email.isEmpty) {
-      _showErrorDialog(l10n.errorResetPasswordEmailEmpty);
+      _showErrorDialog("Şifrenizi sıfırlamak için lütfen e-postanızı girin.");
       return;
     }
 
@@ -133,38 +129,37 @@ class _LoginScreenState extends State<LoginScreen> {
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.infoPasswordResetEmailSent)),
+          SnackBar(content: Text("E-postanıza bir şifre sıfırlama bağlantısı gönderildi.")),
         );
       }
     } on FirebaseAuthException catch (e) {
-      String errorMessage = l10n.errorLoginFailed;
+      String errorMessage = "Giriş işlemi başarısız. Lütfen tekrar deneyin.";
       if (e.code == 'user-not-found') {
-        errorMessage = l10n.errorUserNotFoundPasswordReset;
+        errorMessage = "Bu e-posta adresine sahip bir kullanıcı bulunamadı.";
       }
       if (mounted) {
         _showErrorDialog(errorMessage);
       }
     } catch (e) {
       if (mounted) {
-        _showErrorDialog(l10n.errorUnexpected(e.toString()));
+        _showErrorDialog("Beklenmedik bir hata oluştu: $e");
       }
     }
   }
 
   void _showErrorDialog(String message) {
-    final l10n = AppLocalizations.of(context)!;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
           backgroundColor: isDarkMode ? Colors.grey[900] : Colors.white,
-          title: Text(l10n.titleLoginError, style: Theme.of(context).textTheme.titleLarge),
+          title: Text("Giriş Hatası", style: Theme.of(context).textTheme.titleLarge),
           content: Text(message, style: Theme.of(context).textTheme.bodyMedium),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: Text(l10n.okButton,
+              child: Text("Tamam",
                   style: TextStyle(
                       color: isDarkMode ? Colors.white : MyApp.primaryColor,
                       fontWeight: FontWeight.bold)),
@@ -177,7 +172,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -197,7 +191,7 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                l10n.appName,
+                "RizzBot",
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.displayLarge?.copyWith(
                     fontSize: 60,
@@ -212,7 +206,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                l10n.welcomeBack,
+                "Tekrar hoşgeldiniz!",
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     color: Theme.of(context).brightness == Brightness.dark
@@ -224,20 +218,20 @@ class _LoginScreenState extends State<LoginScreen> {
               TextField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
-                decoration: InputDecoration(hintText: l10n.emailHint),
+                decoration: InputDecoration(hintText: "E-posta"),
               ),
               const SizedBox(height: 20),
               TextField(
                 controller: _passwordController,
                 obscureText: true,
-                decoration: InputDecoration(hintText: l10n.passwordHint),
+                decoration: InputDecoration(hintText: "Şifre"),
               ),
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: _resetPassword,
                   child: Text(
-                    l10n.forgotPasswordButton,
+                    "Şifrenizi mi unuttunuz?",
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Theme.of(context).brightness == Brightness.dark
                               ? Colors.white70
@@ -252,7 +246,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ? const Center(child: CircularProgressIndicator())
                   : ElevatedButton(
                       onPressed: _signInWithEmail,
-                      child: Text(l10n.loginButton),
+                      child: Text("Giriş Yap"),
                     ),
               const SizedBox(height: 20),
               _isLoading ? const SizedBox.shrink() : _buildGoogleSignInButton(),
@@ -266,7 +260,6 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildGoogleSignInButton() {
-    final l10n = AppLocalizations.of(context)!;
     return ElevatedButton.icon(
       onPressed: _signInWithGoogle,
       style: ElevatedButton.styleFrom(
@@ -276,7 +269,7 @@ class _LoginScreenState extends State<LoginScreen> {
         shadowColor: Colors.black38,
       ),
       icon: const FaIcon(FontAwesomeIcons.google, size: 20),
-      label: Text(l10n.continueWithGoogleButton,
+      label: Text("Google ile Devam Et",
           style: Theme.of(context)
               .textTheme
               .labelLarge
@@ -285,17 +278,16 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildSignUpButton() {
-    final l10n = AppLocalizations.of(context)!;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(l10n.dontHaveAccount, style: Theme.of(context).textTheme.bodyMedium),
+        Text("Hesabınız yok mu?", style: Theme.of(context).textTheme.bodyMedium),
         TextButton(
           onPressed: () {
             Navigator.pushNamed(context, SignUpScreen.routeName);
           },
           child: Text(
-            l10n.signUpButton,
+            "Kayıt Ol",
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).brightness == Brightness.dark ? Colors.white : MyApp.primaryColor,
                   fontWeight: FontWeight.bold,

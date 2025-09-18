@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:provider/provider.dart';
-import 'package:rizzbot/providers/locale_provider.dart';
 import 'package:rizzbot/providers/theme_provider.dart';
 import 'package:rizzbot/screens/home_screen.dart';
 import 'package:rizzbot/screens/profile_screen.dart';
 import 'package:rizzbot/screens/chat_screen.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class MainScreen extends StatefulWidget {
   static const String routeName = '/main-screen';
@@ -35,7 +33,7 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(AppLocalizations.of(context)!.appTitle),
+        title: const Text('RizzBot'),
         elevation: 4,
         centerTitle: true,
       ),
@@ -56,26 +54,12 @@ class _MainScreenState extends State<MainScreen> {
         direction: SpeedDialDirection.down,
         children: [
           SpeedDialChild(
-            child: const Icon(Icons.language),
-            label: AppLocalizations.of(context)!.languageChange,
-            backgroundColor: Colors.blue,
-            foregroundColor: Colors.white,
-            onTap: () {
-              final provider = Provider.of<LocaleProvider>(context, listen: false);
-              if (provider.locale.languageCode == 'tr') {
-                provider.setLocale(const Locale('en'));
-              } else {
-                provider.setLocale(const Locale('tr'));
-              }
-            },
-          ),
-          SpeedDialChild(
             child: Consumer<ThemeProvider>(
               builder: (context, themeProvider, _) {
                 return Icon(themeProvider.themeMode == ThemeMode.dark ? Icons.wb_sunny : Icons.nightlight_round);
               },
             ),
-            label: AppLocalizations.of(context)!.themeChange,
+            label: "Temayı Değiştir",
             backgroundColor: Colors.amber,
             foregroundColor: Colors.white,
             onTap: () {
@@ -85,18 +69,18 @@ class _MainScreenState extends State<MainScreen> {
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
-        items: <BottomNavigationBarItem>[
+        items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
-            icon: const Icon(Icons.home),
-            label: AppLocalizations.of(context)!.navHome,
+            icon: Icon(Icons.home),
+            label: "Ana Sayfa",
           ),
           BottomNavigationBarItem(
-            icon: const Icon(Icons.chat_bubble),
-            label: AppLocalizations.of(context)!.navChat,
+            icon: Icon(Icons.chat_bubble),
+            label: "Sohbet",
           ),
           BottomNavigationBarItem(
-            icon: const Icon(Icons.person),
-            label: AppLocalizations.of(context)!.navProfile,
+            icon: Icon(Icons.person),
+            label: "Profil",
           ),
         ],
         currentIndex: _selectedIndex,
