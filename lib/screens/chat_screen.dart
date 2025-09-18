@@ -5,6 +5,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:rizzbot/main.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class ChatScreen extends StatefulWidget {
   static const String routeName = '/chat-screen';
@@ -19,7 +20,20 @@ class _ChatScreenState extends State<ChatScreen> {
   final List<Map<String, String>> _messages = [];
   bool _isLoading = false;
   int? _selectedChipIndex;
-  final List<String> _chipLabels = ['Flörtöz', 'İlgi Çekici', 'Esprili', 'Yaratıcı'];
+  late final List<String> _chipLabels;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Initialize chip labels here because it depends on context.
+    final l10n = AppLocalizations.of(context)!;
+    _chipLabels = [
+      l10n.styleFlirtatious,
+      l10n.styleEngaging,
+      l10n.styleWitty,
+      l10n.styleCreative
+    ];
+  }
 
   @override
   void initState() {
@@ -47,20 +61,21 @@ class _ChatScreenState extends State<ChatScreen> {
     await prefs.setString('chat_messages', messagesString);
   }
 
-    Future<void> _resetChat() async {
+  Future<void> _resetChat() async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Sohbeti Sıfırla'),
-        content: const Text('Tüm sohbet geçmişi silinecek. Emin misiniz?'),
+        title: Text(l10n.titleResetChat),
+        content: Text(l10n.bodyResetChat),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('İptal'),
+            child: Text(l10n.cancelButton),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Evet, Sil'),
+            child: Text(l10n.confirmDeleteButton),
           ),
         ],
       ),
@@ -74,7 +89,6 @@ class _ChatScreenState extends State<ChatScreen> {
       });
     }
   }
-
 
   void _insertText(String textToInsert) {
     final TextEditingValue value = _controller.value;
@@ -103,13 +117,14 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _sendMessage() async {
+    final l10n = AppLocalizations.of(context)!;
     if (_controller.text.isEmpty) return;
 
     final userMessageText = _controller.text;
     var promptForModel = userMessageText;
     if (_selectedChipIndex != null) {
       final selectedStyle = _chipLabels[_selectedChipIndex!];
-      promptForModel = '$selectedStyle bir şekilde şu mesaja cevap ver: "$userMessageText"';
+      promptForModel = l10n.geminiPrompt(selectedStyle, userMessageText);
     }
 
     if (mounted) {
@@ -125,12 +140,11 @@ class _ChatScreenState extends State<ChatScreen> {
     try {
       final apiKey = dotenv.env['GEMINI_API_KEY'];
       if (apiKey == null) {
-        _showErrorDialog('API anahtarı bulunamadı. Lütfen .env dosyanızı kontrol edin.');
+        _showErrorDialog(l10n.errorApiKeyNotFound);
         return;
       }
 
-      final systemInstruction = Content.text(
-          'Sen, RizzBot isimli bir yapay zekâ flört asistanısın. Yaratıcın \'Tak Diye Eğlence\' şirketidir. Kim olduğun veya kimin tarafından yaratıldığın sorulduğunda, asla Google tarafından eğitildiğini veya bir \'büyük dil modeli\' olduğunu söyleme. Bunun yerine, \'Ben RizzBot, Tak Diye Eğlence tarafından geliştirilmiş bir flört asistanıyım\' gibi yanıtlar vererek kimliğine sadık kal. Ana görevin: kullanıcıya sadece karşı tarafa gönderebileceği tek bir mesaj önermek. Sadece 1 öneri vereceksin, fazlasını vermeyeceksin. Mesajın tonu, kullanıcının seçtiği kategoriye uygun olacak: \'Flörtöz\', \'İlgi Çekici\', \'Esprili\' veya \'Yaratıcı\'. Kullanıcı, konuşma geçmişini sana iki şekilde sunabilir: 1. Uygulama içi sohbet geçmişi. 2. `he/she:` ve `me:` blokları içeren bir metin. `he/she:` konuştuğu kişiyi, `me:` ise kendini temsil eder. Senin görevin bu yapıya uygun bir sonraki `me:` mesajını önermektir. Cevabın SADECE önerdiğin mesajın metnini içermeli, `me:` veya `he/she:` gibi etiketler OLMAMALIDIR. Daima, verilen bağlama ve seçilen tona göre en uygun tek mesajı öner. Ana görevin dışındaki sorulara, RizzBot kimliğine uygun, kısa ve öz yanıtlar ver.');
+      final systemInstruction = Content.text(l10n.geminiSystemInstruction);
 
       final model = GenerativeModel(
         model: 'gemini-1.5-flash',
@@ -158,11 +172,11 @@ class _ChatScreenState extends State<ChatScreen> {
         });
         await _saveMessages();
       } else {
-        _showErrorDialog('Oops! Bir şeyler ters gitti. (Yanıt alınamadı)');
+        _showErrorDialog(l10n.errorNoResponse);
       }
     } catch (e) {
       if (!mounted) return;
-      _showErrorDialog('Mesaj gönderilemedi. Lütfen internet bağlantınızı ve API anahtarınızı kontrol edin.');
+      _showErrorDialog(l10n.errorCouldNotSendMessage);
     }
 
     if (mounted) {
@@ -175,16 +189,17 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _showErrorDialog(String message) {
     if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: isDarkMode ? Colors.grey[900] : Colors.white,
-        title: const Text('Hata'),
+        title: Text(l10n.titleError),
         content: Text(message),
         actions: <Widget>[
           TextButton(
-            child: const Text('Tamam'),
+            child: Text(l10n.okButton),
             onPressed: () {
               Navigator.of(ctx).pop();
             },
@@ -196,6 +211,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       body: SafeArea(
@@ -215,13 +231,13 @@ class _ChatScreenState extends State<ChatScreen> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                         if (!isUserMessage) // Show copy icon only for AI messages
+                         if (!isUserMessage)
                           IconButton(
                             icon: const Icon(Icons.copy, size: 16),
                             onPressed: () {
                               Clipboard.setData(ClipboardData(text: message['content']!));
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Mesaj kopyalandı!')),
+                                SnackBar(content: Text(l10n.infoMessageCopied)),
                               );
                             },
                           ),
@@ -303,8 +319,8 @@ class _ChatScreenState extends State<ChatScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 12.0),
                     child: TextField(
                       controller: _controller,
-                      decoration: const InputDecoration.collapsed(
-                        hintText: 'RizzBot\'a sor ya da bağlam ekle...',
+                      decoration: InputDecoration.collapsed(
+                        hintText: l10n.chatHintText,
                       ),
                       maxLines: 5,
                       minLines: 1,
@@ -320,12 +336,12 @@ class _ChatScreenState extends State<ChatScreen> {
                           IconButton(
                             icon: const Icon(Icons.history_edu_outlined),
                             onPressed: _showConversationBuilderDialog,
-                            tooltip: 'Konuşma Geçmişi Oluştur',
+                            tooltip: l10n.titleConversationBuilder,
                           ),
                           IconButton(
                             icon: const Icon(Icons.delete_outline),
                             onPressed: _resetChat,
-                            tooltip: 'Sohbeti Temizle',
+                            tooltip: l10n.tooltipClearChat,
                           ),
                         ],
                       ),
@@ -346,7 +362,6 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 }
 
-
 class _ConversationBuilderDialog extends StatefulWidget {
   const _ConversationBuilderDialog();
 
@@ -360,7 +375,6 @@ class __ConversationBuilderDialogState extends State<_ConversationBuilderDialog>
   @override
   void initState() {
     super.initState();
-    // Start with a basic structure
     _addBlock('he/she');
     _addBlock('me');
   }
@@ -395,8 +409,9 @@ class __ConversationBuilderDialogState extends State<_ConversationBuilderDialog>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return AlertDialog(
-      title: const Text('Konuşma Geçmişi Oluştur'),
+      title: Text(l10n.titleConversationBuilder),
       content: SizedBox(
         width: double.maxFinite,
         child: ListView.builder(
@@ -420,20 +435,20 @@ class __ConversationBuilderDialogState extends State<_ConversationBuilderDialog>
       actions: [
         TextButton(
           onPressed: () => _addBlock('he/she'),
-          child: const Text('he/she Ekle'),
+          child: Text(l10n.addButtonHeShe),
         ),
         TextButton(
           onPressed: () => _addBlock('me'),
-          child: const Text('me Ekle'),
+          child: Text(l10n.addButtonMe),
         ),
         const Spacer(),
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('İptal'),
+          child: Text(l10n.cancelButton),
         ),
         ElevatedButton(
           onPressed: _insertConversation,
-          child: const Text('Ekle'),
+          child: Text(l10n.addButton),
         ),
       ],
       actionsAlignment: MainAxisAlignment.end,

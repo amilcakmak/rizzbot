@@ -1,11 +1,12 @@
-
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import 'package:rizzbot/firebase_options.dart';
+import 'package:rizzbot/providers/locale_provider.dart';
 import 'package:rizzbot/providers/theme_provider.dart';
 import 'package:rizzbot/screens/login_screen.dart';
 import 'package:rizzbot/screens/main_screen.dart';
@@ -18,8 +19,11 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   runApp(
-    ChangeNotifierProvider(
-      create: (context) => ThemeProvider(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => ThemeProvider()),
+        ChangeNotifierProvider(create: (context) => LocaleProvider()),
+      ],
       child: const MyApp(),
     ),
   );
@@ -32,11 +36,14 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ThemeProvider>(
-      builder: (context, themeProvider, child) {
+    return Consumer2<ThemeProvider, LocaleProvider>(
+      builder: (context, themeProvider, localeProvider, child) {
         return MaterialApp(
           title: 'Rizz Bot',
           themeMode: themeProvider.themeMode,
+          locale: localeProvider.locale,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: ThemeData(
             brightness: Brightness.light,
             primaryColor: primaryColor,
@@ -140,6 +147,7 @@ class AuthWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
@@ -152,9 +160,9 @@ class AuthWrapper extends StatelessWidget {
         }
 
         if (snapshot.hasError) {
-          return const Scaffold(
+          return Scaffold(
             body: Center(
-              child: Text('Bir hata oluştu. Lütfen uygulamayı yeniden başlatın.'),
+              child: Text(l10n.errorRestartApp),
             ),
           );
         }

@@ -1,10 +1,9 @@
-
-// lib/screens/signup_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:rizzbot/auth_service.dart';
 import 'package:rizzbot/main.dart';
 import 'package:rizzbot/screens/main_screen.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class SignUpScreen extends StatefulWidget {
   static const String routeName = '/signup-screen';
@@ -15,8 +14,6 @@ class SignUpScreen extends StatefulWidget {
 }
 
 class _SignUpScreenState extends State<SignUpScreen> {
-  // Artık doğrudan FirebaseAuth.instance'ı değil, merkezi servisimiz olan AuthService'i kullanıyoruz.
-  // Bu, mimariyi temiz tutar ve test edilebilirliği artırır.
   late final AuthService _authService;
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -26,7 +23,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
   @override
   void initState() {
     super.initState();
-    // FirebaseAuthService'i oluşturup, ona FirebaseAuth instance'ını veriyoruz.
     _authService = FirebaseAuthService(FirebaseAuth.instance);
   }
 
@@ -38,7 +34,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   Future<void> _signUp() async {
-    // Formun geçerli olup olmadığını kontrol et
+    final l10n = AppLocalizations.of(context)!;
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     setState(() {
@@ -51,9 +47,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
         _passwordController.text.trim(),
       );
 
-      // Kayıt başarılı olursa, kullanıcıyı ana ekrana yönlendir.
-      // `mounted` kontrolü, widget hala ekranda mı diye kontrol eder. Asenkron
-      // işlemler sonrası state güncellemelerinde güvenlik için önemlidir.
       if (mounted) {
         Navigator.pushNamedAndRemoveUntil(
           context,
@@ -62,25 +55,22 @@ class _SignUpScreenState extends State<SignUpScreen> {
         );
       }
     } on FirebaseAuthException catch (e) {
-      // Firebase'den gelen spesifik hataları yakalayıp kullanıcıya gösteriyoruz.
-      String errorMessage = 'Kayıt başarısız oldu.';
+      String errorMessage = l10n.errorSignUpFailed;
       if (e.code == 'weak-password') {
-        errorMessage = 'Şifre çok zayıf. Lütfen daha güçlü bir şifre seçin.';
+        errorMessage = l10n.errorWeakPassword;
       } else if (e.code == 'email-already-in-use') {
-        errorMessage = 'Bu e-posta adresi zaten kullanılıyor.';
+        errorMessage = l10n.errorEmailInUse;
       } else if (e.code == 'invalid-email') {
-        errorMessage = 'Geçersiz e-posta adresi.';
+        errorMessage = l10n.errorInvalidEmail;
       }
       if (mounted) {
         _showErrorDialog(errorMessage);
       }
     } catch (e) {
-      // Diğer beklenmedik hatalar için genel bir mesaj göster.
       if (mounted) {
-        _showErrorDialog('Bilinmeyen bir hata oluştu: $e');
+        _showErrorDialog(l10n.errorUnknown(e.toString()));
       }
     } finally {
-      // İşlem bitince yükleme durumunu kapat.
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -90,18 +80,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   void _showErrorDialog(String message) {
+    final l10n = AppLocalizations.of(context)!;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: isDarkMode ? Colors.grey[900] : Colors.white,
-        title: Text('Kayıt Hatası', style: Theme.of(context).textTheme.titleLarge),
+        title: Text(l10n.titleSignUpError, style: Theme.of(context).textTheme.titleLarge),
         content: Text(message, style: Theme.of(context).textTheme.bodyMedium),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: Text(
-              'Tamam',
+              l10n.okButton,
               style: TextStyle(
                 color: isDarkMode ? Colors.white : MyApp.primaryColor,
                 fontWeight: FontWeight.bold,
@@ -115,9 +106,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Kayıt Ol'),
+        title: Text(l10n.signUpButton),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -131,7 +123,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Yeni Hesap Oluştur',
+                  l10n.createAccountTitle,
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.displaySmall?.copyWith(
                         fontWeight: FontWeight.bold,
@@ -141,10 +133,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(hintText: 'E-posta'),
+                  decoration: InputDecoration(hintText: l10n.emailHint),
                   validator: (value) {
                     if (value == null || value.isEmpty || !value.contains('@')) {
-                      return 'Lütfen geçerli bir e-posta girin.';
+                      return l10n.validatorInvalidEmail;
                     }
                     return null;
                   },
@@ -153,10 +145,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 TextFormField(
                   controller: _passwordController,
                   obscureText: true,
-                  decoration: const InputDecoration(hintText: 'Şifre'),
+                  decoration: InputDecoration(hintText: l10n.passwordHint),
                   validator: (value) {
                     if (value == null || value.isEmpty || value.length < 6) {
-                      return 'Şifre en az 6 karakter olmalıdır.';
+                      return l10n.validatorPasswordLength;
                     }
                     return null;
                   },
@@ -166,12 +158,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ? const Center(child: CircularProgressIndicator())
                     : ElevatedButton(
                         onPressed: _signUp,
-                        child: const Text('Kayıt Ol'),
+                        child: Text(l10n.signUpButton),
                       ),
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
                   child: Text(
-                    'Zaten hesabın var mı? Giriş Yap',
+                    l10n.alreadyHaveAccountLogin,
                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Theme.of(context).brightness == Brightness.dark
                               ? Colors.white70
